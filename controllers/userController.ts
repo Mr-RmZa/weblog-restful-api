@@ -1,6 +1,5 @@
 import axios from "axios";
 import bcrypt from "bcryptjs";
-import passport from "passport";
 import { User } from "../models/User";
 import * as svgCaptcha from "svg-captcha";
 import { sendEmail } from "../utils/mailer";
@@ -13,7 +12,6 @@ import {
 } from "../models/secure/userValidation";
 
 export class userController {
-
   public static async recaptcha(
     req: {
       body: { [x: string]: any };
@@ -30,10 +28,7 @@ export class userController {
         const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA}&response=${GRR}&remoteip=${req.connection.remoteAddress}`;
         const response = await axios.post(verifyUrl);
         if (response.data.success) {
-          passport.authenticate("local", {
-            failureRedirect: req.originalUrl,
-            failureFlash: true,
-          })(req, res, next);
+          console.log("mmd");
         } else {
           req.flash("error", "recaptcha error");
           return res.redirect(req.originalUrl);
@@ -48,36 +43,7 @@ export class userController {
     }
   }
 
-  public static rememberMe(
-    req: {
-      flash(arg0: string, arg1: string): unknown;
-      body: { rememberMe: any };
-      session: { cookie: { originalMaxAge: number; expires: null } };
-    },
-    res: any
-  ) {
-    try {
-      if (req.body.rememberMe) {
-        req.session.cookie.originalMaxAge = 20 * 60 * 60 * 1000; // 1 day or 24 hour
-      } else {
-        req.session.cookie.expires = null;
-      }
-      req.flash("success_msg", "login was successfully");
-      return res.redirect("/admin");
-    } catch (error) {
-      console.log(error);
-      return res.redirect("/error/500");
-    }
-  }
-
-  public static logout(
-    req: {
-      logout: (arg0: (err: any) => any) => void;
-      flash: (arg0: string, arg1: string) => void;
-    },
-    res: any,
-    next: (arg0: any) => any
-  ) {
+  public static logout(req: any, res: any, next: (arg0: any) => any) {
     try {
       req.logout((err: any) => {
         if (err) {
@@ -87,7 +53,6 @@ export class userController {
           "Cache-Control",
           "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0"
         );
-        req.flash("success_msg", "logout was successfully");
         return res.redirect("/");
       });
     } catch (error) {
@@ -298,33 +263,32 @@ export class userController {
     }
   }
 
-  public static handleContact(req: any, res: any) {
+  public static handleContact(req: any, res: any, next: any) {
     try {
       const { fullName, email, message, captcha } = req.body;
       schemaContact
         .validate(req.body, { abortEarly: false })
         .then(() => {
-          if (captcha === req.session.captcha) {
-            sendEmail(
-              email,
-              fullName,
-              "پیام از طرف وبلاگ",
-              `${message} <br/> ایمیل کاربر : ${email}`
-            );
-            req.flash("success_msg", "your message has been successfully sent");
-            return res.redirect("/contact");
-          } else {
-            req.flash("error", "the code is not correct");
-            return res.redirect("/contact");
-          }
+          // if (captcha === req.session.captcha) {
+          sendEmail(
+            email,
+            fullName,
+            "پیام از طرف وبلاگ",
+            `${message} <br/> ایمیل کاربر : ${email}`
+          );
+          return res
+            .status(200)
+            .json({ message: "your message has been successfully sent" });
+          // } else {
+          //   return res.status(422).json({ error: "the code is not correct" });
+          // }
         })
         .catch((err: { errors: any }) => {
-          req.flash("error", err.errors);
-          return res.redirect("/contact");
+          return res.status(422).json({ errors: err.errors });
         });
     } catch (error) {
       console.log(error);
-      return res.redirect("/error/500");
+      return next(error);
     }
   }
 

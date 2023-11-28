@@ -1,16 +1,8 @@
 export class auth {
-  public static authenticated(
-    req: {
-      isAuthenticated: () => any;
-      flash: (arg0: string, arg1: string) => void;
-    },
-    res: { redirect: (arg0: string) => void },
-    next: () => any
-  ) {
+  public static authenticated(req: any, res: any, next: any) {
     if (req.isAuthenticated()) {
       return next();
     }
-    req.flash("error", "you are not login!");
-    res.redirect("/admin/login");
+    return res.status(422).json({ message: "your are not login" });
   }
 }

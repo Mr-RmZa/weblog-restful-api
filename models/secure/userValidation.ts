@@ -42,5 +42,5 @@ export const schemaContact = object().shape({
   message: string()
     .required("massage is required")
     .min(5, "message minimum 5 character"),
-  captcha: string().required("captcha is required"),
+  // captcha: string().required("captcha is required"),
 });

@@ -7,64 +7,48 @@ import { Request, Response } from "express";
 import { schemaImage, schemaPost } from "../models/secure/postValidation";
 
 export class postController {
-  public static async index(req: Request, res: Response) {
+  public static async index(
+    req: Request,
+    res: Response,
+    next: (arg0: unknown) => any
+  ) {
     try {
-      // let auth;
-      // req.isAuthenticated() ? (auth = true) : (auth = false);
-
-      const page = +req.query.page! || 1;
-      const postPerPage = 5;
-
       const numberOfPosts = await Blog.find({
         status: "public",
       }).countDocuments();
 
-      const posts = await Blog.find({ status: "public" })
-        .sort({
-          createdAt: "desc",
-        })
-        .skip((page - 1) * postPerPage)
-        .limit(postPerPage);
-
-      return res.render("index", {
-        pageTitle: "weblog",
-        message: req.flash("success_msg"),
-        error: req.flash("error"),
-        posts,
-        url: process.env.URl,
-        formatDate,
-        truncate,
-        currentPage: page,
-        nextPage: page + 1,
-        previousPage: page - 1,
-        hasNextPage: postPerPage * page < numberOfPosts,
-        hasPreviousPage: page > 1,
-        lastPage: Math.ceil(numberOfPosts / postPerPage),
-        // auth,
+      const posts = await Blog.find({ status: "public" }).sort({
+        createdAt: "desc",
       });
+
+      return res.status(200).json({ posts, total: numberOfPosts });
     } catch (error) {
       console.log(error);
-      return res.redirect("/error/500");
+      return next(error);
     }
   }
 
-  public static async show(req: Request, res: Response) {
+  public static async show(
+    req: Request,
+    res: Response,
+    next: (arg0: unknown) => any
+  ) {
     try {
-      const post = await Blog.findOne({ _id: req.params.id }).populate("user");
-      if (post) {
-        return res.render("posts/show", {
-          pageTitle: post.title,
-          post,
-          url: process.env.URl,
-          formatDate,
-        });
-      } else {
-        req.flash("error", "there is nothing!");
-        return res.redirect("/");
+      try {
+        const post = await Blog.findOne({ _id: req.params.id }).populate(
+          "user"
+        );
+        if (post) {
+          return res.status(200).json({ post });
+        } else {
+          return res.status(404).json({ message: "Not Found" });
+        }
+      } catch (error) {
+        return res.status(404).json({ message: "Not Found" });
       }
     } catch (error) {
       console.log(error);
-      return res.redirect("/error/500");
+      return next(error);
     }
   }
 
@@ -225,10 +209,8 @@ export class postController {
             if (err) console.log(err);
           }
         );
-        req.flash("success_msg", "post deleted!");
         return res.redirect("/admin");
       } else {
-        req.flash("error", "there is nothing!");
         return res.redirect("/admin");
       }
     } catch (error) {
