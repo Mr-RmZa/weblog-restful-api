@@ -16,11 +16,9 @@ export class postController {
       const numberOfPosts = await Blog.find({
         status: "public",
       }).countDocuments();
-
       const posts = await Blog.find({ status: "public" }).sort({
         createdAt: "desc",
       });
-
       return res.status(200).json({ posts, total: numberOfPosts });
     } catch (error) {
       console.log(error);
@@ -72,7 +70,7 @@ export class postController {
           await sharp(thumbnail.data)
             .jpeg({ quality: 60 })
             .toFile(uploadPath)
-            .catch((err) => console.log(err));
+            .catch((error) => console.log(error));
           await Blog.create({
             ...req.body,
             user: req.user.id,
@@ -81,8 +79,8 @@ export class postController {
           req.flash("success_msg", "post created!");
           return res.redirect("/admin");
         })
-        .catch((err: { errors: string }) => {
-          req.flash("error", err.errors);
+        .catch((error: { errors: string }) => {
+          req.flash("error", error.errors);
           return res.redirect("/blog/create");
         });
     } catch (error) {
@@ -104,13 +102,13 @@ export class postController {
             await sharp(image.data)
               .jpeg({ quality: 60 })
               .toFile(uploadPath)
-              .catch((err) => console.log(err));
+              .catch((error) => console.log(error));
             return res
               .status(200)
               .send(`http://${process.env.URL}:3000/uploads/${fileName}`);
           })
-          .catch((err: { errors: string }) => {
-            return res.status(400).send(err.errors);
+          .catch((error: { errors: string }) => {
+            return res.status(400).send(error.errors);
           });
       } else {
         return res.send("you must select a photo to upload");
@@ -156,13 +154,13 @@ export class postController {
               if (thumbnail.name) {
                 fs.unlink(
                   `${appRoot}/public/uploads/thumbnails/${post.thumbnail}`,
-                  async (err: any) => {
-                    if (err) console.log(err);
+                  async (error: any) => {
+                    if (error) console.log(error);
                     else {
                       await sharp(thumbnail.data)
                         .jpeg({ quality: 60 })
                         .toFile(uploadPath)
-                        .catch((err) => console.log(err));
+                        .catch((error) => console.log(error));
                     }
                   }
                 );
@@ -186,8 +184,8 @@ export class postController {
             return res.redirect("/admin");
           }
         })
-        .catch((err) => {
-          req.flash("error", err.errors);
+        .catch((error) => {
+          req.flash("error", error.errors);
           return res.redirect(`/blog/edit/${req.params.id}`);
         });
     } catch (error) {
@@ -205,8 +203,8 @@ export class postController {
         await Blog.findByIdAndDelete(req.params.id);
         fs.unlink(
           `${appRoot}/public/uploads/thumbnails/${post.thumbnail}`,
-          (err: any) => {
-            if (err) console.log(err);
+          (error: any) => {
+            if (error) console.log(error);
           }
         );
         return res.redirect("/admin");
