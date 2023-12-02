@@ -4,6 +4,7 @@ import shortId from "shortid";
 import appRoot from "app-root-path";
 import { Blog } from "../models/Blog";
 import { Request, Response } from "express";
+import { errorController } from "./errorController";
 import { schemaImage, schemaPost } from "../models/secure/postValidation";
 
 export class postController {
@@ -39,10 +40,10 @@ export class postController {
         if (post) {
           return res.status(200).json({ post });
         } else {
-          return res.status(404).json({ message: "Not Found" });
+          errorController.error("not found!", 404, next);
         }
       } catch (error) {
-        return res.status(404).json({ message: "Not Found" });
+        errorController.error("not found!", 404, next);
       }
     } catch (error) {
       console.log(error);
@@ -89,7 +90,11 @@ export class postController {
     }
   }
 
-  public static upload(req: { files: { image: any }; body: any }, res: any) {
+  public static upload(
+    req: { files: { image: any }; body: any },
+    res: any,
+    next: any
+  ) {
     try {
       if (req.files) {
         const image = req.files ? req.files.image : {};
@@ -108,7 +113,7 @@ export class postController {
               .send(`http://${process.env.URL}:3000/uploads/${fileName}`);
           })
           .catch((error: { errors: string }) => {
-            return res.status(400).send(error.errors);
+            errorController.error(error.errors, 400, next);
           });
       } else {
         return res.send("you must select a photo to upload");

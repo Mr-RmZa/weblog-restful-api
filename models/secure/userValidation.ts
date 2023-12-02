@@ -17,7 +17,10 @@ export const schemaRegister = object().shape({
   confirmPassword: string()
     .required("confirm password is required")
     .oneOf([ref("password")], "password does not match"),
-  // captcha: string().required("captcha is required"),
+  // captcha: string()
+  //   .required("captcha is required")
+  //   .min(1, "captcha minimum 1 character")
+  //   .max(2, "captcha maximum 2 character"),
 });
 
 export const schemaLogin = object().shape({
@@ -30,7 +33,10 @@ export const schemaLogin = object().shape({
     .required("password is required")
     .min(5, "password minimum 5 character")
     .max(100, "password maximum 100 character"),
-  // captcha: string().required("captcha is required"),
+  // captcha: string()
+  //   .required("captcha is required")
+  //   .min(1, "captcha minimum 1 character")
+  //   .max(2, "captcha maximum 2 character"),
 });
 
 export const schemaForgetPass = object().shape({
@@ -39,7 +45,10 @@ export const schemaForgetPass = object().shape({
     .required("email is required")
     .min(5, "password minimum 5 character")
     .max(100, "password maximum 100 character"),
-  // captcha: string().required("captcha is required"),
+  // captcha: string()
+  //   .required("captcha is required")
+  //   .min(1, "captcha minimum 1 character")
+  //   .max(2, "captcha maximum 2 character"),
 });
 
 export const schemaResetPass = object().shape({
@@ -65,5 +74,8 @@ export const schemaContact = object().shape({
   message: string()
     .required("massage is required")
     .min(5, "message minimum 5 character"),
-  // captcha: string().required("captcha is required"),
+  // captcha: string()
+  //   .required("captcha is required")
+  //   .min(1, "captcha minimum 1 character")
+  //   .max(2, "captcha maximum 2 character"),
 });

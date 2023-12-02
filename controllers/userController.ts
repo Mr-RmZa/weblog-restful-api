@@ -4,6 +4,7 @@ import { User } from "../models/User";
 import * as svgCaptcha from "svg-captcha";
 import { sendEmail } from "../utils/mailer";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import { errorController } from "./errorController";
 import {
   schemaLogin,
   schemaContact,
@@ -44,14 +45,14 @@ export class userController {
                 .status(200)
                 .json({ token, userId: user._id.toString() });
             } else {
-              return res.status(422).json({ message: "not found!" });
+              errorController.error("not found!", 422, next);
             }
           } else {
-            return res.status(404).json({ message: "not found!" });
+            errorController.error("not found!", 404, next);
           }
         })
         .catch((error: { errors: any }) => {
-          return res.status(422).json({ message: error.errors });
+          errorController.error(error.errors, 422, next);
         });
     } catch (error) {
       console.log(error);
@@ -137,14 +138,14 @@ export class userController {
             );
             return res.status(201).json({ message: "register successfully!" });
             // } else {
-            //   return res.status(422).json({ error: "the code is not correct" });
+            // errorController.error("the code is not correct!", 422);
             // }
           } else {
-            return res.status(422).json({ message: "duplicate email!" });
+            errorController.error("duplicate email!", 422, next);
           }
         })
         .catch((error: { errors: any }) => {
-          return res.status(422).json({ message: error.errors });
+          errorController.error(error.errors, 422, next);
         });
     } catch (error) {
       console.log(error);
@@ -194,19 +195,19 @@ export class userController {
             //   );
             //   return res.redirect("/admin/forgetPassword");
             // });
-            res.status(200).json({
+            return res.status(200).json({
               message:
-                "the email containing the link has been sent successfully",
+                "the email containing the link has been sent successfully!",
             });
           } else {
-            return res.status(404).json({ message: "not found!" });
+            errorController.error("not found!", 404, next);
           }
           // } else {
-          //   return res.status(422).json({ error: "the code is not correct" });
+          // errorController.error("the code is not correct", 422, next);
           // }
         })
         .catch((error: { errors: any }) => {
-          return res.status(422).json({ message: error.errors });
+          errorController.error(error.errors, 422, next);
         });
     } catch (error) {
       console.log(error);
@@ -235,19 +236,19 @@ export class userController {
               bcrypt.hash(password, 10).then(async (hash) => {
                 user.password = hash;
                 await user.save();
-                res.status(200).json({
+                return res.status(200).json({
                   message: "your password has been successfully updated",
                 });
               });
             } else {
-              return res.status(404).json({ message: "not found!" });
+              errorController.error("not found!", 404, next);
             }
           })
           .catch((error: { errors: any }) => {
-            return res.status(422).json({ message: error.errors });
+            errorController.error(error.errors, 422, next);
           });
       } else {
-        return res.status(404).json({ message: "not found!" });
+        errorController.error("not found!", 404, next);
       }
     } catch (error) {
       console.log(error);
@@ -272,11 +273,11 @@ export class userController {
             .status(200)
             .json({ message: "your message has been successfully sent" });
           // } else {
-          //   return res.status(422).json({ error: "the code is not correct" });
+          // errorController.error("the code is not correct!", 422, next);
           // }
         })
         .catch((error: { errors: any }) => {
-          return res.status(422).json({ message: error.errors });
+          errorController.error(error.errors, 422, next);
         });
     } catch (error) {
       console.log(error);
@@ -288,6 +289,6 @@ export class userController {
     const captcha = svgCaptcha.createMathExpr({ mathMin: 1 });
     req.session.captcha = captcha.text;
     res.type("svg");
-    res.status(200).send(captcha.data);
+    return res.status(200).send(captcha.data);
   }
 }
