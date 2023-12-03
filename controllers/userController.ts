@@ -48,11 +48,11 @@ export class userController {
               errorController.error("not found!", 422, next);
             }
           } else {
-            errorController.error("not found!", 404, next);
+            errorController.error("not found!", 422, next);
           }
         })
-        .catch((error: { errors: any }) => {
-          errorController.error(error.errors, 422, next);
+        .catch((error) => {
+          errorController.error("not found!", 422, next);
         });
     } catch (error) {
       console.log(error);
@@ -144,7 +144,7 @@ export class userController {
             errorController.error("duplicate email!", 422, next);
           }
         })
-        .catch((error: { errors: any }) => {
+        .catch((error) => {
           errorController.error(error.errors, 422, next);
         });
     } catch (error) {
@@ -206,7 +206,7 @@ export class userController {
           // errorController.error("the code is not correct", 422, next);
           // }
         })
-        .catch((error: { errors: any }) => {
+        .catch((error) => {
           errorController.error(error.errors, 422, next);
         });
     } catch (error) {
@@ -244,7 +244,7 @@ export class userController {
               errorController.error("not found!", 404, next);
             }
           })
-          .catch((error: { errors: any }) => {
+          .catch((error) => {
             errorController.error(error.errors, 422, next);
           });
       } else {
@@ -276,7 +276,7 @@ export class userController {
           // errorController.error("the code is not correct!", 422, next);
           // }
         })
-        .catch((error: { errors: any }) => {
+        .catch((error) => {
           errorController.error(error.errors, 422, next);
         });
     } catch (error) {

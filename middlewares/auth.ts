@@ -10,10 +10,15 @@ export class auth {
       const authHeader = req.get("Authorization");
       if (authHeader) {
         const token = authHeader.split(" ")[1]; //Bearer Token => ['Bearer', token]
-        const decodedToken = jwt.verify(
-          token,
-          process.env.JWT_SECRET!
-        ) as JwtPayload;
+        let decodedToken;
+        try {
+          decodedToken = jwt.verify(
+            token,
+            process.env.JWT_SECRET!
+          ) as JwtPayload;
+        } catch (error) {
+          decodedToken = null;
+        }
         if (decodedToken) {
           req.userId = decodedToken.user.userId;
           next();

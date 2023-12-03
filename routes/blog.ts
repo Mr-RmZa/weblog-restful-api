@@ -4,9 +4,9 @@ import { postController } from "../controllers/postController";
 
 export const routerBlog = Router();
 
-routerBlog.post("/create", auth.authenticated, postController.store);
+routerBlog.post("/create", auth.authenticated, postController.create);
 
-routerBlog.put("/edit/:id", auth.authenticated, postController.update);
+routerBlog.put("/edit/:id", auth.authenticated, postController.edit);
 
 routerBlog.delete("/delete/:id", auth.authenticated, postController.delete);
 

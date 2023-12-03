@@ -51,42 +51,32 @@ export class postController {
     }
   }
 
-  public static store(
-    req: {
-      files: { thumbnail: any };
-      body: any;
-      user: { id: any };
-      flash: (arg0: string, arg1: string) => void;
-    },
-    res: any
-  ) {
+  public static create(req: any, res: Response, next: (arg0: unknown) => any) {
     try {
       const thumbnail = req.files ? req.files.thumbnail : {};
-      const fileName = `${shortId.generate()}_${thumbnail.name}`;
-      const uploadPath = `${appRoot}/public/uploads/thumbnails/${fileName}`;
       req.body = { ...req.body, thumbnail };
       schemaPost
         .validate(req.body, { abortEarly: false })
         .then(async () => {
+          const fileName = `${shortId.generate()}_${thumbnail.name}`;
+          const uploadPath = `${appRoot}/public/uploads/thumbnails/${fileName}`;
           await sharp(thumbnail.data)
             .jpeg({ quality: 60 })
             .toFile(uploadPath)
             .catch((error) => console.log(error));
           await Blog.create({
             ...req.body,
-            user: req.user.id,
+            user: req.userId,
             thumbnail: fileName,
           });
-          req.flash("success_msg", "post created!");
-          return res.redirect("/admin");
+          res.status(201).json({ message: "post created!" });
         })
-        .catch((error: { errors: string }) => {
-          req.flash("error", error.errors);
-          return res.redirect("/blog/create");
+        .catch((error) => {
+          errorController.error(error.errors, 422, next);
         });
     } catch (error) {
       console.log(error);
-      return res.redirect("/error/500");
+      return next(error);
     }
   }
 
@@ -98,12 +88,12 @@ export class postController {
     try {
       if (req.files) {
         const image = req.files ? req.files.image : {};
-        const fileName = `${shortId.generate()}_${image.name}`;
-        const uploadPath = `${appRoot}/public/uploads/${fileName}`;
         req.body = { ...req.body, image };
         schemaImage
           .validate(req.body, { abortEarly: false })
           .then(async () => {
+            const fileName = `${shortId.generate()}_${image.name}`;
+            const uploadPath = `${appRoot}/public/uploads/${fileName}`;
             await sharp(image.data)
               .jpeg({ quality: 60 })
               .toFile(uploadPath)
@@ -112,7 +102,7 @@ export class postController {
               .status(200)
               .send(`http://${process.env.URL}:3000/uploads/${fileName}`);
           })
-          .catch((error: { errors: string }) => {
+          .catch((error) => {
             errorController.error(error.errors, 400, next);
           });
       } else {
@@ -124,21 +114,18 @@ export class postController {
     }
   }
 
-  public static async update(
+  public static async edit(
     req: {
       files: { thumbnail: any };
-      params: { id: any };
       body: any;
-      user: { _id: string };
-      flash: (arg0: string, arg1: string) => void;
+      params: { id: any };
+      userId: string;
     },
-    res: any
+    res: any,
+    next: any
   ) {
     try {
       const thumbnail = req.files ? req.files.thumbnail : {};
-      const fileName = `${shortId.generate()}_${thumbnail.name}`;
-      const uploadPath = `${appRoot}/public/uploads/thumbnails/${fileName}`;
-      const post = await Blog.findOne({ _id: req.params.id });
       if (thumbnail.name) {
         req.body = { ...req.body, thumbnail };
       } else {
@@ -154,8 +141,11 @@ export class postController {
       schemaPost
         .validate(req.body, { abortEarly: false })
         .then(async () => {
+          const fileName = `${shortId.generate()}_${thumbnail.name}`;
+          const uploadPath = `${appRoot}/public/uploads/thumbnails/${fileName}`;
+          const post = await Blog.findOne({ _id: req.params.id });
           if (post) {
-            if (post.user!.toString() == req.user._id) {
+            if (post.user!.toString() == req.userId) {
               if (thumbnail.name) {
                 fs.unlink(
                   `${appRoot}/public/uploads/thumbnails/${post.thumbnail}`,
@@ -178,28 +168,28 @@ export class postController {
               post.thumbnail = thumbnail.name ? fileName : post.thumbnail;
 
               await post.save();
-              req.flash("success_msg", "post edited!");
-              return res.redirect("/admin");
+              return res.status(200).json({ message: "post edited!" });
             } else {
-              req.flash("error", "there is nothing!");
-              return res.redirect("/admin");
+              errorController.error("your not permissions!", 401, next);
             }
           } else {
-            req.flash("error", "there is nothing!");
-            return res.redirect("/admin");
+            errorController.error("not found!", 404, next);
           }
         })
         .catch((error) => {
-          req.flash("error", error.errors);
-          return res.redirect(`/blog/edit/${req.params.id}`);
+          errorController.error(error.errors, 422, next);
         });
     } catch (error) {
       console.log(error);
-      return res.redirect("/error/500");
+      return next(error);
     }
   }
 
-  public static async delete(req: Request, res: Response) {
+  public static async delete(
+    req: Request,
+    res: Response,
+    next: (arg0: unknown) => any
+  ) {
     try {
       const post = await Blog.findOne({
         _id: req.params.id,
@@ -210,15 +200,16 @@ export class postController {
           `${appRoot}/public/uploads/thumbnails/${post.thumbnail}`,
           (error: any) => {
             if (error) console.log(error);
+            return;
           }
         );
-        return res.redirect("/admin");
+        return res.status(200).json({ message: "post deleted!" });
       } else {
-        return res.redirect("/admin");
+        errorController.error("not found!", 404, next);
       }
     } catch (error) {
       console.log(error);
-      return res.redirect("/error/500");
+      return next(error);
     }
   }
 }
