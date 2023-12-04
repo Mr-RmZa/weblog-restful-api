@@ -1,4 +1,5 @@
 import path from "path";
+import helmet from "helmet";
 import morgan from "morgan";
 import express from "express";
 import * as dotenv from "dotenv";
@@ -13,6 +14,9 @@ import { morganStream } from "./config/winston";
 import { errorHandler } from "./middlewares/error";
 
 const app = express();
+
+// use helmet
+app.use(helmet());
 
 // env
 dotenv.config({ path: "./config/config.env" });

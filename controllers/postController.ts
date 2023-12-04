@@ -106,11 +106,11 @@ export class postController {
             errorController.error(error.errors, 400, next);
           });
       } else {
-        return res.send("you must select a photo to upload");
+        errorController.error("you must select a photo to upload", 400, next);
       }
     } catch (error) {
       console.log(error);
-      return res.redirect("/error/500");
+      return next(error);
     }
   }
 
