@@ -1,7 +1,6 @@
 import axios from "axios";
 import bcrypt from "bcryptjs";
 import { User } from "../models/User";
-import * as svgCaptcha from "svg-captcha";
 import { sendEmail } from "../utils/mailer";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { errorController } from "./errorController";
@@ -283,12 +282,5 @@ export class userController {
       console.log(error);
       return next(error);
     }
-  }
-
-  public static captcha(req: { session: { captcha: any } }, res: any) {
-    const captcha = svgCaptcha.createMathExpr({ mathMin: 1 });
-    req.session.captcha = captcha.text;
-    res.type("svg");
-    return res.status(200).send(captcha.data);
   }
 }

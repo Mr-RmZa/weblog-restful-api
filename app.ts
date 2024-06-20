@@ -1,6 +1,5 @@
 import path from "path";
 import helmet from "helmet";
-import morgan from "morgan";
 import express from "express";
 import * as dotenv from "dotenv";
 import { router } from "./routes";
@@ -10,7 +9,6 @@ import { routerBlog } from "./routes/blog";
 import fileUpload from "express-fileupload";
 import { routerAdmin } from "./routes/admin";
 import { header } from "./middlewares/header";
-import { morganStream } from "./config/winston";
 import { errorHandler } from "./middlewares/error";
 
 const app = express();
@@ -23,9 +21,6 @@ dotenv.config({ path: "./config/config.env" });
 
 // database
 connect.mongodb();
-
-// show requests
-app.use(morgan("combined", { stream: morganStream }));
 
 // parse data
 app.use(express.json());

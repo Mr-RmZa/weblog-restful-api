@@ -9,5 +9,3 @@ router.get("/", postController.index);
 router.get("/post/:id", postController.show);
 
 router.post("/contact", userController.contact);
-
-router.get("/captcha", userController.captcha);
