@@ -1,0 +1,34 @@
+{
+  "name": "super_dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@majidh1/jalalidatepicker": "^0.9.4",
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
+    "js-cookie": "^3.0.5",
+    "jsonwebtoken": "8.5.1",
+    "next": "14.2.4",
+    "nextjs-toploader": "^1.6.12",
+    "react": "^18.3.1",
+    "react-countdown-circle-timer": "^3.2.1",
+    "react-dom": "^18.3.1",
+    "react-toastify": "^10.0.5",
+    "typed.js": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/bootstrap": "^5.2.10",
+    "@types/js-cookie": "^3.0.6",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.14.6",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,151 @@
+body {
+  font-family: var(--iranSansDs) !important;
+  direction: rtl;
+}
+.form-floating > label {
+  left: auto !important;
+}
+.text-justify {
+  text-align: justify;
+}
+.vh-90 {
+  height: 90vh;
+}
+.w-275-px {
+  width: 270px;
+}
+.container {
+  max-width: 960px;
+}
+.icon-link > .bi {
+  width: 0.75em;
+  height: 0.75em;
+}
+.site-header {
+  background-color: rgba(0, 0, 0, 0.85);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+.site-header a {
+  color: #8e8e8e;
+  transition: color 0.15s ease-in-out;
+}
+.site-header a:hover {
+  color: #fff;
+  text-decoration: none;
+}
+.product-device {
+  position: absolute;
+  right: 10%;
+  bottom: -40%;
+  width: 300px;
+  height: 540px;
+  background-color: #333;
+  border-radius: 21px;
+  transform: rotate(30deg);
+}
+.product-device::before {
+  position: absolute;
+  top: 10%;
+  right: 10px;
+  bottom: 10%;
+  left: 10px;
+  content: "";
+  background-color: #bad6ff;
+  border-radius: 5px;
+}
+.product-device-2 {
+  top: -30%;
+  right: auto;
+  bottom: 0;
+  left: 10%;
+  background-color: #e5e5e5;
+}
+.flex-equal > * {
+  flex: 1;
+}
+@media (min-width: 768px) {
+  .flex-md-equal > * {
+    flex: 1;
+  }
+}
+.bg-telegram {
+  background-color: #0088cc;
+}
+.bg-facebook {
+  background-color: #1877f2;
+}
+.bg-instagram {
+  background-color: #e4405f;
+}
+.bg-whatsapp {
+  background-color: #25d366;
+}
+.bg-bale {
+  background-color: #0aca9b;
+}
+.bg-eitaa {
+  background-color: #f37f00;
+}
+.bg-twitter {
+  background-color: #1da1f2;
+}
+@media (min-width: 40em) {
+  .featurette-heading {
+    font-size: 50px;
+  }
+}
+@media (min-width: 62em) {
+  .featurette-heading {
+    margin-top: 7rem;
+  }
+}
+.text-break {
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+}
+.cover-container {
+  max-width: 42em;
+}
+.top {
+  top: 5rem;
+}
+.top-25 {
+  top: 25%;
+}
+.hidden {
+  transform: translateY(-100%);
+}
+.navbar {
+  transition: 0.25s ease transform;
+}
+.Toastify__toast-body {
+  font-family: var(--iranSansDs) !important;
+}
+.scroll-down {
+  transform: rotate(-45deg);
+  position: absolute;
+  bottom: 5rem;
+  left: 50%;
+  width: 1rem;
+  height: 1rem;
+  margin-left: -12px;
+  border-left: 0.125rem solid #fff;
+  border-bottom: 0.125rem solid #fff;
+  -webkit-animation: scrollDown 1.4s infinite;
+  animation: scrollDown 1.4s infinite;
+  z-index: 8;
+}
+@keyframes scrollDown {
+  0% {
+    transform: rotate(-45deg) translate(0, 0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-45deg) translate(-100%, 100%);
+    opacity: 0;
+  }
+}
