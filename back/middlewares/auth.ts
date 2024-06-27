@@ -1,39 +1,46 @@
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { errorController } from "../controllers/errorController";
-export class auth {
+import { Request, Response, NextFunction } from "express";
+import { ErrorController } from "../controllers/errorController";
+
+export class Auth {
   public static authenticated(
-    req: { get: (arg0: string) => any; userId: any },
-    res: any,
-    next: any
-  ) {
+    req: Request & { userId?: string },
+    res: Response,
+    next: NextFunction
+  ): void {
     try {
       const authHeader = req.get("Authorization");
-      if (authHeader) {
-        const token = authHeader.split(" ")[1]; //Bearer Token => ['Bearer', token]
-        let decodedToken;
-        try {
-          decodedToken = jwt.verify(
-            token,
-            process.env.JWT_SECRET!
-          ) as JwtPayload;
-        } catch (error) {
-          decodedToken = null;
-        }
-        if (decodedToken) {
-          req.userId = decodedToken.user.userId;
-          next();
-        } else {
-          errorController.error(
-            "You do not have enough permissions!",
-            401,
-            next
-          );
-        }
-      } else {
-        errorController.error("You do not have enough permissions!", 401, next);
+
+      if (!authHeader) {
+        return ErrorController.error(
+          "You do not have enough permissions!",
+          401,
+          next
+        );
       }
+
+      const token = authHeader.split(" ")[1]; // Bearer Token => ['Bearer', token]
+
+      let decodedToken: JwtPayload | null = null;
+
+      try {
+        decodedToken = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+      } catch (error) {
+        return ErrorController.error("Invalid token!", 401, next);
+      }
+
+      if (!decodedToken) {
+        return ErrorController.error(
+          "You do not have enough permissions!",
+          401,
+          next
+        );
+      }
+
+      req.userId = decodedToken.user.userId;
+      next();
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return next(error);
     }
   }

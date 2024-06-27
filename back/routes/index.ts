@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { postController } from "../controllers/postController";
-import { userController } from "../controllers/userController";
+import { UserController } from "../controllers/userController";
 
 export const router = Router();
 
-router.get("/", postController.index);
+router.post("/otp", UserController.otp);
 
-router.get("/post/:id", postController.show);
+router.post("/rest", UserController.rest);
 
-router.post("/contact", userController.contact);
+router.post("/login", UserController.login);
+
+router.post("/password", UserController.password);

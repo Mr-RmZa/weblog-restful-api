@@ -1,31 +1,24 @@
-import * as nodeMailer from "nodemailer";
-import smtpTransport from "nodemailer-smtp-transport";
+import nodemailer from "nodemailer";
 
-const transporterDetails = smtpTransport({
-  host: process.env.MAIL_HOST,
-  port: parseInt(process.env.MAIL_PORT!),
-  secure: true,
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: Number(process.env.EMAIL_PORT),
+  secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
-export const sendEmail = (
-  email: string,
-  fullName: string,
-  subject: string,
-  message: string
-): void => {
-  const transporter = nodeMailer.createTransport(transporterDetails);
-  transporter.sendMail({
-    from: process.env.MAIL_USER,
-    to: email,
-    subject: subject,
-    html: `<h1> سلام ${fullName}</h1>
-            <p>${message}</p>`,
-  });
-};
+export default class EmailService {
+  static async sendOTP(email: string, otp: string) {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Your OTP Code",
+      text: `Your OTP code is ${otp}`,
+    };
+
+    return transporter.sendMail(mailOptions);
+  }
+}

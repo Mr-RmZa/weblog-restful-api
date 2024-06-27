@@ -3,29 +3,38 @@ import helmet from "helmet";
 import express from "express";
 import * as dotenv from "dotenv";
 import { router } from "./routes";
-import connect from "./config/db";
 import { log } from "console-log-colors";
-import { routerBlog } from "./routes/blog";
+import rateLimit from "express-rate-limit";
 import fileUpload from "express-fileupload";
-import { routerAdmin } from "./routes/admin";
-import { header } from "./middlewares/header";
-import { errorHandler } from "./middlewares/error";
+import { Error } from "./middlewares/error";
+import { Header } from "./middlewares/header";
+
+// env
+dotenv.config();
 
 const app = express();
 
 // use helmet
 app.use(helmet());
 
-// env
-dotenv.config({ path: "./config/config.env" });
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 دقیقه
+  max: +process.env.LIMIT!, // حداکثر 100 درخواست در هر 15 دقیقه از یک IP
+  message: {
+    message:
+      "the number of requests has exceeded the limit, please search again later.",
+  },
+  standardHeaders: true, // ارسال اطلاعات نرخ محدودیت در هدرهای پاسخ
+  legacyHeaders: false, // غیرفعال کردن هدرهای محدودیت قدیمی
+});
 
-// database
-connect.mongodb();
+// limit
+app.use(limiter);
 
 // parse data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(header.setHeader);
+app.use(Header.header);
 
 // file upload middleware
 app.use(fileUpload());
@@ -35,11 +44,9 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // routes
 app.use("/", router);
-app.use("/admin", routerAdmin);
-app.use("/blog", routerBlog);
 
 // error controller
-app.use(errorHandler.error);
+app.use(Error.error);
 
 app.listen(process.env.PORT, () =>
   log.green(`start server port : ${process.env.PORT}`)

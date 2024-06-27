@@ -80,7 +80,7 @@ function Login() {
 
     try {
       const response = await fetch(
-        "http://172.16.58.192:443/api/v1/auth/login-register",
+        "http://localhost:3001/login",
         {
           method: "POST",
           cache: "no-store",

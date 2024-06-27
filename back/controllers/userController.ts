@@ -1,64 +1,166 @@
 import axios from "axios";
 import bcrypt from "bcryptjs";
-import { User } from "../models/User";
-import { sendEmail } from "../utils/mailer";
-import jwt, { JwtPayload } from "jsonwebtoken";
-import { errorController } from "./errorController";
-import {
-  schemaLogin,
-  schemaContact,
-  schemaRegister,
-  schemaResetPass,
-  schemaForgetPass,
-} from "../models/secure/userValidation";
+import jwt from "jsonwebtoken";
+import PrismaService from "../config/db";
+import RedisService from "../config/redis";
+import { NextFunction, Request, Response } from "express";
 
-export class userController {
-  public static login(
-    req: { body: { email: any; password: any } },
-    res: any,
-    next: (arg0: unknown) => any
-  ) {
+export class UserController {
+  public static async login(req: Request, res: Response, next: NextFunction) {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "email is required." });
+    }
+
     try {
-      schemaLogin
-        .validate(req.body, { abortEarly: false })
-        .then(async () => {
-          const { email, password } = req.body;
-          const user = await User.findOne({ email });
-          if (user) {
-            const isEqual = await bcrypt.compare(password, user.password!);
-            if (isEqual) {
-              const token = jwt.sign(
-                {
-                  user: {
-                    userId: user._id.toString(),
-                    email: user.email,
-                    fullName: user.fullName,
-                  },
-                },
-                process.env.JWT_SECRET!,
-                {
-                  expiresIn: "1h",
-                }
-              );
-              return res
-                .status(200)
-                .json({ token, userId: user._id.toString() });
-            } else {
-              errorController.error("not found!", 422, next);
-            }
-          } else {
-            errorController.error("not found!", 422, next);
-          }
-        })
-        .catch((error) => {
-          errorController.error("not found!", 422, next);
+      PrismaService.connect();
+
+      const prisma = PrismaService.getClient();
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (user) {
+        return res.status(200).json({ isUser: true });
+      } else {
+        const isUser = false;
+
+        const getOTP = await RedisService.getOTP(email);
+
+        const getTTL = await RedisService.getTTL(email);
+
+        if (!getOTP && !getTTL) {
+          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+          const ttl = 15 * 60; // 15 minutes
+          await RedisService.setOTP(email, otp, ttl);
+          return res.status(200).json({
+            isUser,
+            otpTtl: ttl,
+          });
+        }
+
+        return res.status(200).json({
+          isUser,
+          otpTtl: getTTL,
         });
+      }
     } catch (error) {
-      console.log(error);
-      return next(error);
+      console.error(error);
+      next(error);
+    } finally {
+      await PrismaService.disconnect();
+      await RedisService.disconnect();
     }
   }
 
+  public static async otp(req: Request, res: Response, next: NextFunction) {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "email and otp are required." });
+    }
+
+    try {
+      PrismaService.connect();
+
+      const prisma = PrismaService.getClient();
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (user) {
+        return res.status(200).json({ isUser: true });
+      }
+
+      const getOTP = await RedisService.getOTP(email);
+
+      if (getOTP === otp) {
+        const token = jwt.sign({ email }, process.env.JWT_SECRET!, {
+          expiresIn: "1h",
+        });
+        return res.status(200).json({ token });
+      } else {
+        return res.status(400).json({ message: "invalid or expired otp." });
+      }
+    } catch (error) {
+      console.error(error);
+      next(error);
+    } finally {
+      await RedisService.disconnect();
+      await PrismaService.disconnect();
+    }
+  }
+
+  public static async password(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "email is not correct" });
+    }
+
+    try {
+      await PrismaService.connect();
+
+      // const user = await PrismaService.Prisma.user.findUnique({
+      //   where: { email },
+      // });
+
+      // if (user) {
+      //   return res.status(400).json({ message: "email is available" });
+      // }
+    } catch (error) {
+      console.error(error);
+      next(error);
+    } finally {
+      await PrismaService.disconnect();
+    }
+  }
+
+  public static async rest(req: Request, res: Response, next: NextFunction) {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res
+        .status(400)
+        .json({ message: "token and new password are required." });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        email: string;
+      };
+
+      const email = decoded.email;
+
+      PrismaService.connect();
+
+      const prisma = PrismaService.getClient();
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await prisma.user.upsert({
+        where: { email },
+        update: { password: hashedPassword },
+        create: { email, password: hashedPassword },
+      });
+
+      //remove jwt
+
+      return res.status(200).json({ message: "updated password" });
+    } catch (error) {
+      console.error(error);
+      next(error);
+    } finally {
+      await PrismaService.disconnect();
+    }
+  }
   public static async recaptcha(
     req: {
       body: { [x: string]: any };
@@ -87,200 +189,6 @@ export class userController {
     } catch (error) {
       console.log(error);
       return res.redirect("/error/500");
-    }
-  }
-
-  public static logout(req: any, res: any, next: (arg0: any) => any) {
-    try {
-      req.logout((error: any) => {
-        if (error) {
-          return next(error);
-        }
-        res.set(
-          "Cache-Control",
-          "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0"
-        );
-        return res.redirect("/");
-      });
-    } catch (error) {
-      console.log(error);
-      return res.redirect("/error/500");
-    }
-  }
-
-  public static register(
-    req: { body: { fullName: any; email: any; password: any; captcha: any } },
-    res: any,
-    next: (arg0: unknown) => any
-  ) {
-    try {
-      schemaRegister
-        .validate(req.body, { abortEarly: false })
-        .then(async () => {
-          const { fullName, email, password, captcha } = req.body;
-          const user = await User.findOne({ email });
-          if (!user) {
-            // if (captcha === req.session.captcha) {
-            bcrypt.hash(password, 10).then(async (hash) => {
-              await User.create({
-                fullName,
-                email,
-                password: hash,
-              });
-            });
-            //? Send Welcome Email
-            sendEmail(
-              email,
-              fullName,
-              "خوش آمدی به وبلاگ ما",
-              "خیلی خوشحالیم که به جمع ما وبلاگرهای خفن ملحق شدی"
-            );
-            return res.status(201).json({ message: "register successfully!" });
-            // } else {
-            // errorController.error("the code is not correct!", 422);
-            // }
-          } else {
-            errorController.error("duplicate email!", 422, next);
-          }
-        })
-        .catch((error) => {
-          errorController.error(error.errors, 422, next);
-        });
-    } catch (error) {
-      console.log(error);
-      return next(error);
-    }
-  }
-
-  public static forgetPassword(
-    req: {
-      body: { email: string; captcha: string };
-      // logout: (arg0: (error: any) => any) => void;
-    },
-    res: any,
-    next: (arg0: any) => any
-  ) {
-    try {
-      schemaForgetPass
-        .validate(req.body, { abortEarly: false })
-        .then(async () => {
-          const { email, captcha } = req.body;
-          // if (captcha === req.session.captcha) {
-          const user = await User.findOne({ email: email });
-          if (user) {
-            const token = jwt.sign(
-              { userId: user._id },
-              process.env.JWT_SECRET!,
-              {
-                expiresIn: "1h",
-              }
-            );
-            const resetLink = `http://${process.env.URL}:3000/admin/resetPassword/${token}`;
-            console.log(resetLink);
-            sendEmail(
-              user.email!,
-              user.fullName!,
-              "فراموشی رمز عبور",
-              `جهت تغییر رمز عبور فعلی رو لینک زیر کلیک کنید
-              <a href="${resetLink}">لینک تغییر رمز عبور</a>`
-            );
-            // req.logout((error: any) => {
-            //   if (error) {
-            //     return next(error);
-            //   }
-            //   req.flash(
-            //     "success_msg",
-            //     "the email containing the link has been sent successfully"
-            //   );
-            //   return res.redirect("/admin/forgetPassword");
-            // });
-            return res.status(200).json({
-              message:
-                "the email containing the link has been sent successfully!",
-            });
-          } else {
-            errorController.error("not found!", 404, next);
-          }
-          // } else {
-          // errorController.error("the code is not correct", 422, next);
-          // }
-        })
-        .catch((error) => {
-          errorController.error(error.errors, 422, next);
-        });
-    } catch (error) {
-      console.log(error);
-      return next(error);
-    }
-  }
-
-  public static resetPassword(
-    req: { body: { password: any }; params: { token: any } },
-    res: any,
-    next: (arg0: unknown) => any
-  ) {
-    try {
-      const token = req.params.token;
-      const decodedToken = jwt.verify(
-        token,
-        process.env.JWT_SECRET!
-      ) as JwtPayload;
-      if (decodedToken) {
-        schemaResetPass
-          .validate(req.body, { abortEarly: false })
-          .then(async () => {
-            const { password } = req.body;
-            const user = await User.findOne({ _id: decodedToken.userId });
-            if (user) {
-              bcrypt.hash(password, 10).then(async (hash) => {
-                user.password = hash;
-                await user.save();
-                return res.status(200).json({
-                  message: "your password has been successfully updated",
-                });
-              });
-            } else {
-              errorController.error("not found!", 404, next);
-            }
-          })
-          .catch((error) => {
-            errorController.error(error.errors, 422, next);
-          });
-      } else {
-        errorController.error("not found!", 404, next);
-      }
-    } catch (error) {
-      console.log(error);
-      return next(error);
-    }
-  }
-
-  public static contact(req: any, res: any, next: any) {
-    try {
-      schemaContact
-        .validate(req.body, { abortEarly: false })
-        .then(() => {
-          const { fullName, email, message, captcha } = req.body;
-          // if (captcha === req.session.captcha) {
-          sendEmail(
-            email,
-            fullName,
-            "پیام از طرف وبلاگ",
-            `${message} <br/> ایمیل کاربر : ${email}`
-          );
-          return res
-            .status(200)
-            .json({ message: "your message has been successfully sent" });
-          // } else {
-          // errorController.error("the code is not correct!", 422, next);
-          // }
-        })
-        .catch((error) => {
-          errorController.error(error.errors, 422, next);
-        });
-    } catch (error) {
-      console.log(error);
-      return next(error);
     }
   }
 }

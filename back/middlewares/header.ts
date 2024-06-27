@@ -1,9 +1,7 @@
-export class header {
-  public static setHeader(
-    req: any,
-    res: { setHeader: (arg0: string, arg1: string) => void },
-    next: () => void
-  ) {
+import { Request, Response, NextFunction } from "express";
+
+export class Header {
+  public static header(req: Request, res: Response, next: NextFunction): void {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
     res.setHeader(
