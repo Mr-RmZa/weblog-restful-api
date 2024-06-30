@@ -1,47 +1,77 @@
+import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
 export default class PrismaService {
-  private static instance: PrismaClient | null = null;
+  private static client: PrismaClient | null = null;
 
-  private static initialize() {
-    if (!PrismaService.instance) {
-      PrismaService.instance = new PrismaClient();
-    }
-  }
-
-  public static async connect() {
-    PrismaService.initialize();
-    if (PrismaService.instance) {
-      try {
-        await PrismaService.instance.$connect();
-        // console.log("Prisma connected successfully.");
-      } catch (error) {
-        console.error("Failed to connect Prisma:", error);
-        PrismaService.instance = null;
-        throw error;
+  private static async connect(): Promise<PrismaClient> {
+    try {
+      if (!PrismaService.client) {
+        PrismaService.client = new PrismaClient();
       }
+      return PrismaService.client;
+    } catch (error) {
+      console.error("error connecting to prisma:", error);
+      throw error;
     }
   }
 
-  public static async disconnect() {
-    if (PrismaService.instance) {
-      try {
-        await PrismaService.instance.$disconnect();
-        // console.log("Prisma disconnected successfully.");
-      } catch (error) {
-        console.error("Failed to disconnect Prisma:", error);
-        throw error;
-      } finally {
-        PrismaService.instance = null;
+  public static async getClient(): Promise<PrismaClient> {
+    try {
+      return await PrismaService.connect();
+    } catch (error) {
+      console.error("failed to get prisma client:", error);
+      throw error;
+    }
+  }
+
+  public static async disconnect(): Promise<void> {
+    try {
+      if (PrismaService.client) {
+        await PrismaService.client.$disconnect();
+        // console.log("Prisma client connection closed");
       }
+    } catch (error) {
+      console.error("error disconnecting prisma client:", error);
+      throw error;
+    } finally {
+      PrismaService.client = null;
     }
   }
 
-  public static getClient(): PrismaClient {
-    PrismaService.initialize();
-    if (!PrismaService.instance) {
-      throw new Error("Prisma client is not initialized.");
+  public static async get(email: string) {
+    try {
+      const client = await PrismaService.getClient();
+      return await client.user.findUnique({
+        where: { email },
+      });
+    } catch (error) {
+      console.error("failed to get user:", error);
+      throw error;
+    } finally {
+      await PrismaService.disconnect();
     }
-    return PrismaService.instance;
+  }
+
+  public static async upsert(email: string, hashedPassword: string) {
+    try {
+      const client = await PrismaService.getClient();
+      await client.user.upsert({
+        where: { email },
+        update: { password: hashedPassword },
+        create: { email, password: hashedPassword },
+      });
+    } catch (error) {
+      console.error("failed to get user:", error);
+      throw error;
+    } finally {
+      await PrismaService.disconnect();
+    }
+  }
+
+  public static async password(email: string, password: string) {
+    const user = await this.get(email);
+    if (!user || !user.password) return false;
+    return bcrypt.compare(password, user.password);
   }
 }

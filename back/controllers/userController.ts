@@ -3,162 +3,170 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import PrismaService from "../config/db";
 import RedisService from "../config/redis";
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 
 export class UserController {
-  public static async login(req: Request, res: Response, next: NextFunction) {
+  public static async login(req: Request, res: Response) {
     const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ message: "email is required." });
+    if (
+      !email ||
+      typeof email !== "string" ||
+      !/^[a-zA-Z0-9._%+-][a-zA-Z0-9._%+-][a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/gm.test(
+        email
+      )
+    ) {
+      return res.status(400).json({ message: "email is not valid." });
     }
 
-    try {
-      PrismaService.connect();
+    const user = await PrismaService.get(email);
 
-      const prisma = PrismaService.getClient();
+    if (user) {
+      return res.status(200).json({ isUser: true });
+    } else {
+      const isUser = false;
 
-      const user = await prisma.user.findUnique({
-        where: { email },
-      });
+      const getOTP = await RedisService.get(email);
 
-      if (user) {
-        return res.status(200).json({ isUser: true });
-      } else {
-        const isUser = false;
+      const getTTL = await RedisService.getTtl(email);
 
-        const getOTP = await RedisService.getOTP(email);
+      if (!getOTP && !getTTL) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        const getTTL = await RedisService.getTTL(email);
+        const ttl = 15 * 60; // 15 minutes
 
-        if (!getOTP && !getTTL) {
-          const otp = Math.floor(100000 + Math.random() * 900000).toString();
-          const ttl = 15 * 60; // 15 minutes
-          await RedisService.setOTP(email, otp, ttl);
-          return res.status(200).json({
-            isUser,
-            otpTtl: ttl,
-          });
-        }
+        await RedisService.set(email, otp, ttl);
 
         return res.status(200).json({
           isUser,
-          otpTtl: getTTL,
+          otpTtl: ttl,
         });
       }
-    } catch (error) {
-      console.error(error);
-      next(error);
-    } finally {
-      await PrismaService.disconnect();
-      await RedisService.disconnect();
+
+      return res.status(200).json({
+        isUser,
+        otpTtl: getTTL,
+      });
     }
   }
-
-  public static async otp(req: Request, res: Response, next: NextFunction) {
+  public static async otp(req: Request, res: Response) {
     const { email, otp } = req.body;
 
-    if (!email || !otp) {
-      return res.status(400).json({ message: "email and otp are required." });
+    if (
+      !email ||
+      typeof email !== "string" ||
+      !/^[a-zA-Z0-9._%+-][a-zA-Z0-9._%+-][a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/gm.test(
+        email
+      ) ||
+      !otp ||
+      typeof otp !== "string" ||
+      !/^\d{6}$/gm.test(otp)
+    ) {
+      return res.status(400).json({ message: "email or otp is not valid." });
     }
 
-    try {
-      PrismaService.connect();
+    const user = await PrismaService.get(email);
 
-      const prisma = PrismaService.getClient();
+    if (user) {
+      return res.status(200).json({ isUser: true });
+    }
 
-      const user = await prisma.user.findUnique({
-        where: { email },
+    const getOTP = await RedisService.get(email);
+
+    if (getOTP === otp) {
+      await RedisService.delete(email);
+
+      const token = jwt.sign({ email }, process.env.JWT_SECRET!, {
+        expiresIn: "1h",
       });
 
-      if (user) {
-        return res.status(200).json({ isUser: true });
-      }
-
-      const getOTP = await RedisService.getOTP(email);
-
-      if (getOTP === otp) {
-        const token = jwt.sign({ email }, process.env.JWT_SECRET!, {
-          expiresIn: "1h",
-        });
-        return res.status(200).json({ token });
-      } else {
-        return res.status(400).json({ message: "invalid or expired otp." });
-      }
-    } catch (error) {
-      console.error(error);
-      next(error);
-    } finally {
-      await RedisService.disconnect();
-      await PrismaService.disconnect();
+      return res.status(200).json({ token });
     }
+
+    return res
+      .status(401)
+      .json({ message: "invalid or expired email or otp." });
   }
-
-  public static async password(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "email is not correct" });
-    }
-
-    try {
-      await PrismaService.connect();
-
-      // const user = await PrismaService.Prisma.user.findUnique({
-      //   where: { email },
-      // });
-
-      // if (user) {
-      //   return res.status(400).json({ message: "email is available" });
-      // }
-    } catch (error) {
-      console.error(error);
-      next(error);
-    } finally {
-      await PrismaService.disconnect();
-    }
-  }
-
-  public static async rest(req: Request, res: Response, next: NextFunction) {
+  public static async rest(req: Request, res: Response) {
     const { token, password } = req.body;
 
-    if (!token || !password) {
+    if (
+      !token ||
+      typeof token !== "string" ||
+      !/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+\/=]+$/gm.test(token) ||
+      !password ||
+      typeof password !== "string" ||
+      /[\u0600-\u06FF\s]+/.test(password)
+    ) {
       return res
         .status(400)
-        .json({ message: "token and new password are required." });
+        .json({ message: "token or password is not valid." });
     }
 
+    const blacklist = await RedisService.get(`blacklist:${token}`);
+
+    if (blacklist) {
+      return res.status(401).json({ message: "invalid or expired token." });
+    }
+
+    let decoded;
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
         email: string;
       };
-
-      const email = decoded.email;
-
-      PrismaService.connect();
-
-      const prisma = PrismaService.getClient();
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      await prisma.user.upsert({
-        where: { email },
-        update: { password: hashedPassword },
-        create: { email, password: hashedPassword },
-      });
-
-      //remove jwt
-
-      return res.status(200).json({ message: "updated password" });
     } catch (error) {
-      console.error(error);
-      next(error);
-    } finally {
-      await PrismaService.disconnect();
+      return res.status(401).json({ message: "invalid or expired token." });
+    }
+
+    const email = decoded.email;
+
+    const user = await PrismaService.get(email);
+
+    if (user) {
+      await RedisService.set(`blacklist:${token}`, "true", 30 * 24 * 60 * 60); // 30 day
+    } else {
+      await RedisService.set(`blacklist:${token}`, "true", 60 * 60); // 1 hour
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await PrismaService.upsert(email, hashedPassword);
+
+    const newToken = jwt.sign({ email }, process.env.JWT_SECRET!, {
+      expiresIn: "30d",
+    });
+
+    return res.status(200).json({ token: newToken });
+  }
+  public static async password(req: Request, res: Response) {
+    const { email, password } = req.body;
+
+    if (
+      !email ||
+      typeof email !== "string" ||
+      !/^[a-zA-Z0-9._%+-][a-zA-Z0-9._%+-][a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/gm.test(
+        email
+      ) ||
+      !password ||
+      typeof password !== "string" ||
+      /[\u0600-\u06FF\s]+/.test(password)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "email or password is not valid." });
+    }
+
+    const user = await PrismaService.password(email, password);
+
+    if (user) {
+      const token = jwt.sign({ email }, process.env.JWT_SECRET!, {
+        expiresIn: "30d",
+      });
+      return res.status(200).json({ token });
+    } else {
+      return res
+        .status(400)
+        .json({ message: "email or password is not valid." });
     }
   }
   public static async recaptcha(

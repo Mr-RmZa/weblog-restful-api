@@ -1,6 +1,7 @@
 import path from "path";
 import helmet from "helmet";
 import express from "express";
+import "express-async-errors";
 import * as dotenv from "dotenv";
 import { router } from "./routes";
 import { log } from "console-log-colors";
@@ -18,17 +19,17 @@ const app = express();
 app.use(helmet());
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 دقیقه
-  max: +process.env.LIMIT!, // حداکثر 100 درخواست در هر 15 دقیقه از یک IP
+  windowMs: 15 * 60 * 1000,
+  max: +process.env.LIMIT!,
   message: {
     message:
       "the number of requests has exceeded the limit, please search again later.",
   },
-  standardHeaders: true, // ارسال اطلاعات نرخ محدودیت در هدرهای پاسخ
-  legacyHeaders: false, // غیرفعال کردن هدرهای محدودیت قدیمی
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// limit
+// limit req
 app.use(limiter);
 
 // parse data
